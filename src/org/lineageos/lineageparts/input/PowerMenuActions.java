@@ -26,6 +26,8 @@ import com.android.settingslib.applications.ServiceListing;
 
 import lineageos.app.LineageGlobalActions;
 
+import com.android.internal.widget.LockPatternUtils;
+
 import org.lineageos.internal.util.PowerMenuConstants;
 import org.lineageos.lineageparts.R;
 import org.lineageos.lineageparts.SettingsPreferenceFragment;
@@ -44,6 +46,7 @@ public class PowerMenuActions extends SettingsPreferenceFragment {
     private CheckBoxPreference mAirplanePref;
     private CheckBoxPreference mUsersPref;
     private CheckBoxPreference mBugReportPref;
+    private CheckBoxPreference mLockDownPref;
     private CheckBoxPreference mEmergencyPref;
     private CheckBoxPreference mDeviceControlsPref;
 
@@ -53,6 +56,7 @@ public class PowerMenuActions extends SettingsPreferenceFragment {
     private boolean mForceEmergCheck = false;
 
     Context mContext;
+    private LockPatternUtils mLockPatternUtils;
     private UserManager mUserManager;
 
     @Override
@@ -62,6 +66,7 @@ public class PowerMenuActions extends SettingsPreferenceFragment {
         addPreferencesFromResource(R.xml.power_menu_settings);
         requireActivity().setTitle(R.string.power_menu_title);
         mContext = requireActivity().getApplicationContext();
+        mLockPatternUtils = new LockPatternUtils(mContext);
         mUserManager = UserManager.get(mContext);
         mLineageGlobalActions = LineageGlobalActions.getInstance(mContext);
         mEmergencyAffordanceManager = new EmergencyAffordanceManager(mContext);
@@ -77,6 +82,8 @@ public class PowerMenuActions extends SettingsPreferenceFragment {
                 mUsersPref = findPreference(GLOBAL_ACTION_KEY_USERS);
             } else if (action.equals(GLOBAL_ACTION_KEY_BUGREPORT)) {
                 mBugReportPref = findPreference(GLOBAL_ACTION_KEY_BUGREPORT);
+            } else if (action.equals(GLOBAL_ACTION_KEY_LOCKDOWN)) {
+                mLockDownPref = findPreference(GLOBAL_ACTION_KEY_LOCKDOWN);
             } else if (action.equals(GLOBAL_ACTION_KEY_EMERGENCY)) {
                 mEmergencyPref = findPreference(GLOBAL_ACTION_KEY_EMERGENCY);
             } else if (action.equals(GLOBAL_ACTION_KEY_DEVICECONTROLS)) {
@@ -171,6 +178,10 @@ public class PowerMenuActions extends SettingsPreferenceFragment {
             value = mUsersPref.isChecked();
             mLineageGlobalActions.updateUserConfig(value, GLOBAL_ACTION_KEY_USERS);
 
+        } else if (preference == mLockDownPref) {
+            value = mLockDownPref.isChecked();
+            mLineageGlobalActions.updateUserConfig(value, GLOBAL_ACTION_KEY_LOCKDOWN);
+
         } else if (preference == mBugReportPref) {
             value = mBugReportPref.isChecked();
             mLineageGlobalActions.updateUserConfig(value, GLOBAL_ACTION_KEY_BUGREPORT);
@@ -209,6 +220,17 @@ public class PowerMenuActions extends SettingsPreferenceFragment {
             } else {
                 mBugReportPref.setChecked(bugReport);
                 mBugReportPref.setSummary(null);
+            }
+        }
+        boolean isKeyguardSecure = mLockPatternUtils.isSecure(UserHandle.myUserId());
+        if (mLockDownPref != null) {
+            mLockDownPref.setEnabled(isKeyguardSecure);
+            mLockDownPref.setChecked(mLineageGlobalActions.userConfigContains(
+                    GLOBAL_ACTION_KEY_LOCKDOWN));
+            if (isKeyguardSecure) {
+                mLockDownPref.setSummary(null);
+            } else {
+                mLockDownPref.setSummary(R.string.power_menu_lockdown_unavailable);
             }
         }
         if (mEmergencyPref != null) {
